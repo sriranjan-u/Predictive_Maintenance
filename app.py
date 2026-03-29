@@ -3,38 +3,37 @@ import joblib
 import pandas as pd
 from huggingface_hub import hf_hub_download
 
+# 1. Page Config (MUST be the very first Streamlit command)
 st.set_page_config(page_title="Engine Health Monitor", layout="wide")
-st.title("🚢 Predictive Maintenance Decision Support System")
+
+st.title("Car Predictive Maintenance Decision Support System")
 st.markdown("---")
 
+# 2. Pure Cached Function (Strictly no UI elements inside)
 @st.cache_resource
 def load_model():
+    repo_id = "Sriranjan/Predictive_Maintenance_Model"
+    
+    # Explicitly setting repo_type to "dataset" based on your CI/CD architecture
+    model_path = hf_hub_download(
+        repo_id=repo_id,
+        filename="engine_pipeline.joblib",
+        repo_type="dataset" 
+    )
+    return joblib.load(model_path)
+
+# 3. Handle loading UI outside the cache
+with st.spinner("Downloading and configuring model from Hugging Face..."):
     try:
-        repo_id = "Sriranjan/Predictive_Maintenance_Model"
-
-        st.write("Downloading model...")
-
-        model_path = hf_hub_download(
-            repo_id=repo_id,
-            filename="engine_pipeline.joblib"   # CHANGE if needed
-        )
-
-        model = joblib.load(model_path)
-        st.success("Model loaded successfully!")
-
-        return model
-
+        model = load_model()
     except Exception as e:
-        st.error(f"Model loading failed: {e}")
-        return None
-
-
-model = load_model()
+        st.error(f"Model loading failed. Please verify the repo_id, filename, and repo_type.\nError details: {e}")
+        st.stop()
 
 if model is None:
     st.stop()
 
-# SIDEBAR INPUTS
+# 4. SIDEBAR INPUTS
 st.sidebar.header("Sensor Inputs")
 
 rpm = st.sidebar.slider("Engine RPM", 400, 1500, 800)
@@ -44,7 +43,7 @@ coolant_pres = st.sidebar.number_input("Coolant Pressure", 0.0, 10.0, 3.0)
 lub_oil_temp = st.sidebar.slider("Lub Oil Temp (°C)", 60, 100, 75)
 coolant_temp = st.sidebar.slider("Coolant Temp (°C)", 60, 100, 80)
 
-# INPUT DATA
+# 5. INPUT DATA (Exact feature names verified)
 input_data = pd.DataFrame(
     [[rpm, lub_oil_pres, fuel_pres, coolant_pres, lub_oil_temp, coolant_temp]],
     columns=[
@@ -57,7 +56,7 @@ input_data = pd.DataFrame(
     ]
 )
 
-# PREDICTION
+# 6. PREDICTION LOGIC
 try:
     prediction = model.predict(input_data)[0]
 
@@ -67,10 +66,10 @@ try:
         probability = None
 
 except Exception as e:
-    st.error(f"Prediction failed: {e}")
+    st.error(f"Prediction failed due to data mismatch: {e}")
     st.stop()
 
-# DISPLAY
+# 7. DISPLAY
 col1, col2 = st.columns(2)
 
 with col1:
@@ -81,10 +80,10 @@ with col2:
     st.subheader("Prediction")
 
     if prediction == 1:
-        st.error("FAULT DETECTED")
+        st.error(" !!! FAULT DETECTED")
         if probability is not None:
-            st.write(f"Probability: {probability:.2%}")
+            st.write(f"**Probability:** {probability:.2%}")
     else:
-        st.success("ENGINE HEALTHY")
+        st.success("ENGINE HEALTHY :) ")
         if probability is not None:
-            st.write(f"Confidence: {(1 - probability):.2%}")
+            st.write(f"**Confidence:** {(1 - probability):.2%}")
