@@ -1,6 +1,4 @@
-
 import pandas as pd
-import numpy as np
 import os
 import mlflow
 import mlflow.sklearn
@@ -10,22 +8,19 @@ from datasets import load_dataset
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
 
-# Models
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 
-
 def train_model():
-
     print("\n===== LOADING TRAIN & TEST FROM HUGGING FACE =====")
 
     dataset = load_dataset("Sriranjan/Predictive_Maintenance_Data")
 
-    # Ensure splits exist
     if 'train' not in dataset or 'test' not in dataset:
         raise ValueError("Train/Test split not found in Hugging Face dataset")
 
@@ -35,25 +30,19 @@ def train_model():
     print("Train Shape:", train_df.shape)
     print("Test Shape:", test_df.shape)
 
-    # ------------------------------
-    # FEATURE / TARGET SPLIT
-    # ------------------------------
+    # Feature / Target split
     X_train = train_df.drop('Engine Condition', axis=1)
     y_train = train_df['Engine Condition']
 
     X_test = test_df.drop('Engine Condition', axis=1)
     y_test = test_df['Engine Condition']
 
-    # ------------------------------
-    # SCALING
-    # ------------------------------
+    # Scaling
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    # ------------------------------
-    # 7 MODELS
-    # ------------------------------
+    # Models
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000),
         "Decision Tree": DecisionTreeClassifier(),
@@ -65,6 +54,7 @@ def train_model():
     }
 
     results = []
+    tuned_results = []
 
     mlflow.set_experiment("Predictive Maintenance")
 
@@ -72,13 +62,12 @@ def train_model():
     best_recall = 0
     best_model_name = ""
 
-    print("\n===== TRAINING 7 MODELS =====")
+    print("\n===== TRAINING MODELS =====")
 
     for name, model in models.items():
 
         with mlflow.start_run(run_name=name):
 
-            # Scaling required models
             if name in ["Logistic Regression", "SVM", "KNN"]:
                 model.fit(X_train_scaled, y_train)
                 y_pred = model.predict(X_test_scaled)
@@ -99,7 +88,7 @@ def train_model():
             mlflow.log_metric("recall", rec)
             mlflow.log_metric("f1_score", f1)
 
-            mlflow.sklearn.log_model(model, name)
+            mlflow.sklearn.log_model(model, name=name)
 
             results.append([name, acc, prec, rec, f1])
 
@@ -108,71 +97,50 @@ def train_model():
                 best_model = model
                 best_model_name = name
 
-    # ------------------------------
-    # MODEL COMPARISON
-    # ------------------------------
-    results_df = pd.DataFrame(results, columns=["Model", "Accuracy", "Precision", "Recall", "F1"])
-    results_df = results_df.sort_values(by="Recall", ascending=False)
+    # Baseline comparison
+    baseline_df = pd.DataFrame(results, columns=["Model", "Accuracy", "Precision", "Recall", "F1"])
+    baseline_df = baseline_df.sort_values(by="Recall", ascending=False)
 
-    print("\n===== MODEL COMPARISON =====")
-    print(results_df)
+    print("\n===== BASELINE MODEL COMPARISON =====")
+    print(baseline_df)
 
     print("\n===== BEST BASE MODEL =====")
     print(f"{best_model_name} (Recall: {best_recall:.4f})")
 
-    # ------------------------------
-    # HYPERPARAMETER TUNING
-    # ------------------------------
+    # Hyperparameter tuning
     print("\n===== HYPERPARAMETER TUNING =====")
 
     tuned_models = {}
 
-    # RANDOM FOREST
-    rf_params = {
-        "n_estimators": [100, 200],
-        "max_depth": [5, 10]
-    }
-
-    rf_grid = GridSearchCV(RandomForestClassifier(), rf_params, scoring='recall', cv=3)
+    rf_grid = GridSearchCV(
+        RandomForestClassifier(),
+        {"n_estimators": [100, 200], "max_depth": [5, 10]},
+        scoring='recall',
+        cv=3
+    )
     rf_grid.fit(X_train, y_train)
     tuned_models["Random Forest"] = rf_grid.best_estimator_
 
-    with mlflow.start_run(run_name="RF_Tuned"):
-        mlflow.log_params(rf_grid.best_params_)
-        mlflow.log_metric("best_recall", rf_grid.best_score_)
-
-    # GRADIENT BOOSTING
-    gb_params = {
-        "n_estimators": [100, 200],
-        "learning_rate": [0.05, 0.1]
-    }
-
-    gb_grid = GridSearchCV(GradientBoostingClassifier(), gb_params, scoring='recall', cv=3)
+    gb_grid = GridSearchCV(
+        GradientBoostingClassifier(),
+        {"n_estimators": [100, 200], "learning_rate": [0.05, 0.1]},
+        scoring='recall',
+        cv=3
+    )
     gb_grid.fit(X_train, y_train)
     tuned_models["Gradient Boosting"] = gb_grid.best_estimator_
 
-    with mlflow.start_run(run_name="GB_Tuned"):
-        mlflow.log_params(gb_grid.best_params_)
-        mlflow.log_metric("best_recall", gb_grid.best_score_)
-
-    # SVM
-    svm_params = {
-        "C": [0.1, 1, 10],
-        "kernel": ["linear", "rbf"]
-    }
-
-    svm_grid = GridSearchCV(SVC(probability=True), svm_params, scoring='recall', cv=3)
+    svm_grid = GridSearchCV(
+        SVC(probability=True),
+        {"C": [0.1, 1, 10], "kernel": ["linear", "rbf"]},
+        scoring='recall',
+        cv=3
+    )
     svm_grid.fit(X_train_scaled, y_train)
     tuned_models["SVM"] = svm_grid.best_estimator_
 
-    with mlflow.start_run(run_name="SVM_Tuned"):
-        mlflow.log_params(svm_grid.best_params_)
-        mlflow.log_metric("best_recall", svm_grid.best_score_)
-
-    # ------------------------------
-    # SELECT BEST TUNED MODEL
-    # ------------------------------
-    print("\n===== SELECTING BEST TUNED MODEL =====")
+    # Evaluate tuned models
+    print("\n===== EVALUATING TUNED MODELS =====")
 
     best_tuned_model = None
     best_tuned_recall = 0
@@ -185,9 +153,14 @@ def train_model():
         else:
             y_pred = model.predict(X_test)
 
+        acc = accuracy_score(y_test, y_pred)
+        prec = precision_score(y_test, y_pred)
         rec = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
 
-        print(f"{name} Tuned Recall: {rec:.4f}")
+        print(f"{name} Tuned \u2192 Recall: {rec:.4f}, F1: {f1:.4f}")
+
+        tuned_results.append([name, acc, prec, rec, f1])
 
         if rec > best_tuned_recall:
             best_tuned_recall = rec
@@ -197,16 +170,43 @@ def train_model():
     print("\n===== FINAL BEST MODEL =====")
     print(f"{best_tuned_name} (Recall: {best_tuned_recall:.4f})")
 
-    # ------------------------------
-    # SAVE FINAL MODEL
-    # ------------------------------
+    # Performance comparison
+    tuned_df = pd.DataFrame(tuned_results, columns=["Model", "Accuracy", "Precision", "Recall", "F1"])
+
+    baseline_df["Type"] = "Baseline"
+    tuned_df["Type"] = "Tuned"
+
+    comparison_df = pd.concat([baseline_df, tuned_df])
+
+    print("\n===== PERFORMANCE COMPARISON =====")
+    print(comparison_df.sort_values(by=["Model", "Type"]))
+
+    # Save comparison
+    os.makedirs("Predictive_Maintenance/reports", exist_ok=True)
+    comparison_path = "Predictive_Maintenance/reports/model_comparison.csv"
+    comparison_df.to_csv(comparison_path, index=False)
+
+    mlflow.log_artifact(comparison_path)
+
+    print(f"\nComparison report saved at: {comparison_path}")
+
+    # Save pipeline
+    print("\n===== SAVING FINAL PIPELINE =====")
+
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", best_tuned_model)
+    ])
+
+    pipeline.fit(X_train, y_train)
+
     os.makedirs("Predictive_Maintenance/models", exist_ok=True)
+    model_path = "Predictive_Maintenance/models/engine_pipeline.joblib"
 
-    joblib.dump(best_tuned_model, "Predictive_Maintenance/models/best_model.pkl")
-    joblib.dump(scaler, "Predictive_Maintenance/models/scaler.pkl")
+    joblib.dump(pipeline, model_path)
+    mlflow.log_artifact(model_path)
 
-    print("\nFinal model saved for deployment.")
-
+    print(f"\nModel pipeline saved at: {model_path}")
 
 if __name__ == "__main__":
     train_model()

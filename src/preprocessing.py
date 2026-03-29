@@ -7,7 +7,7 @@ def clean_and_register_data(repo_id):
     # Load from Hub
     url = f"https://huggingface.co/datasets/{repo_id}/raw/main/engine_data.csv"
     df = pd.read_csv(url)
-    
+
     # IQR Capping (Data Cleaning)
     sensor_cols = ['Lub oil pressure', 'Fuel pressure', 'Coolant pressure', 'lub oil temp', 'Coolant temp']
     for col in sensor_cols:
@@ -16,10 +16,10 @@ def clean_and_register_data(repo_id):
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
             df[col] = df[col].clip(lower=Q1 - 1.5*IQR, upper=Q3 + 1.5*IQR)
-    
+
     # Train-Test Split
     train, test = train_test_split(df, test_size=0.2, random_state=42, stratify=df['Engine Condition'])
-    
+
     # Save Locally
     os.makedirs('Predictive_Maintenance/data', exist_ok=True)
     train_path = 'Predictive_Maintenance/data/train.csv'
