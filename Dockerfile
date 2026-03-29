@@ -1,19 +1,29 @@
-# Use a minimal base image with Python 3.9 installed
 FROM python:3.9-slim
 
-RUN pip install dill
-
-
-# Set the working directory inside the container to /app
 WORKDIR /app
 
-# Copy all files from the current directory on the host to the container's /app directory
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (for caching)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app files
 COPY . .
 
-# Install Python dependencies listed in requirements.txt
-RUN pip3 install -r requirements.txt
+# Expose Streamlit port
+EXPOSE 8501
 
-# Define the command to run the Streamlit app on port 8501 and make it accessible externally
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableXsrfProtection=false"]
+# Streamlit config
+ENV STREAMLIT_SERVER_HEADLESS=true
+ENV STREAMLIT_SERVER_ENABLECORS=false
+ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 
-# NOTE: Disable XSRF protection for easier external access in order to make batch predictions
+# Run Streamlit app
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
