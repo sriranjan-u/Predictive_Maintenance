@@ -1,28 +1,19 @@
+# Use a minimal base image with Python 3.9 installed
 FROM python:3.9-slim
 
+RUN pip install dill
+
+
+# Set the working directory inside the container to /app
 WORKDIR /app
 
-# Install system dependencies (important for sklearn/xgboost)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy only requirements first (better caching)
-COPY requirements.txt .
-
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy rest of app
+# Copy all files from the current directory on the host to the container's /app directory
 COPY . .
 
-# Expose Streamlit port
-EXPOSE 8501
+# Install Python dependencies listed in requirements.txt
+RUN pip3 install -r requirements.txt
 
-# Streamlit config (avoid CORS issues)
-ENV STREAMLIT_SERVER_HEADLESS=true
-ENV STREAMLIT_SERVER_ENABLECORS=false
-ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+# Define the command to run the Streamlit app on port 8501 and make it accessible externally
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableXsrfProtection=false"]
 
-# Run app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# NOTE: Disable XSRF protection for easier external access in order to make batch predictions
