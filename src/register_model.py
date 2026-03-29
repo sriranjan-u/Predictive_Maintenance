@@ -15,7 +15,7 @@ def register_artifacts():
     # 2. Upload model
     api.upload_file(
         path_or_fileobj="Predictive_Maintenance/models/engine_pipeline.joblib", # Corrected filename
-        path_in_repo="engine_model.joblib", # Keep the path in repo as engine_model.joblib for consistency with app.py
+        path_in_repo="engine_pipeline.joblib", # Keep the path in repo as engine_model.joblib for consistency with app.py
         repo_id=repo_id,
         repo_type="model"
     )
