@@ -4,8 +4,8 @@ import pandas as pd
 import os
 from huggingface_hub import hf_hub_download
 
-st.set_page_config(page_title="Engine Health Monitor", layout="wide")
-st.title("Predictive Maintenance Decision Support System")
+st.set_page_config(page_title="AI Powerd Car Predictive Maintenance Decision Support System", layout="wide")
+st.title("AI Powerd Car Predictive Maintenance Decision Support System")
 st.markdown("---")
 
 @st.cache_resource

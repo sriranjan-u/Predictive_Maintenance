@@ -10,6 +10,7 @@ WORKDIR /app
 # 3. Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install streamlit --upgrade
 
 # 4. Copy the rest of your files
 COPY . .
