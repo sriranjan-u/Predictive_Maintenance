@@ -11,7 +11,7 @@ st.markdown("---")
 @st.cache_resource
 def load_model():
     repo_id = "Sriranjan/Predictive_Maintenance_Model"
-    
+
     # Reverting to the default model repository lookup
     model_path = hf_hub_download(
         repo_id=repo_id,
@@ -76,10 +76,10 @@ with col2:
     st.subheader("Prediction")
 
     if prediction == 1:
-        st.error("🚨 FAULT DETECTED")
+        st.error("FAULT DETECTED")
         if probability is not None:
             st.write(f"**Probability:** {probability:.2%}")
     else:
-        st.success("✅ ENGINE HEALTHY")
+        st.success("ENGINE HEALTHY")
         if probability is not None:
             st.write(f"**Confidence:** {(1 - probability):.2%}")
