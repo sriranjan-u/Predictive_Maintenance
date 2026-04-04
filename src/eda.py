@@ -1,104 +1,111 @@
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from IPython.display import display
+import math
 
 def perform_eda(df_path):
+    print(f"\n===== STARTING MACRO EDA ON: {df_path} =====")
+    
     # Load data
     df = pd.read_csv(df_path)
 
-    # Create plots directory
+    # Create a dedicated eda plots directory
     plot_dir = 'Predictive_Maintenance/plots'
     os.makedirs(plot_dir, exist_ok=True)
 
-    sns.set(style="whitegrid")
+    sns.set_theme(style="whitegrid")
 
     # ===============================
     # 1. DATA OVERVIEW
     # ===============================
     print("\n===== 1. DATA OVERVIEW =====")
     print("Shape:", df.shape)
-    print("\nData Types:\n", df.dtypes)
     print("\nSummary Statistics:\n", df.describe())
 
     # ===============================
     # 2. TARGET DISTRIBUTION
     # ===============================
-    print("\n===== 2. TARGET DISTRIBUTION =====")
-
+    print("\n===== 2. GENERATING TARGET DISTRIBUTION =====")
     fig, ax = plt.subplots(figsize=(6,4))
-    sns.countplot(x='Engine Condition', data=df, ax=ax)
-    ax.set_title('Figure 1: Engine Condition Distribution (0: Normal, 1: Faulty)')
-    fig.savefig(f'{plot_dir}/01_target_distribution.png')
+    
+    sns.countplot(x='Engine Condition', data=df, ax=ax, hue='Engine Condition', palette='Set2', legend=False)
+    
+    ax.set_title('Engine Condition Distribution (0: Healthy, 1: Faulty)')
+    fig.savefig(f'{plot_dir}/01_target_distribution.png', bbox_inches='tight')
     plt.close(fig)
 
     # ===============================
-    # 3. UNIVARIATE ANALYSIS
+    # 3. CORRELATION HEATMAP
     # ===============================
-    print("\n===== 3. UNIVARIATE ANALYSIS =====")
-
+    print("\n===== 3. GENERATING CORRELATION HEATMAP =====")
     numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-
-    for col in numeric_cols:
-        fig, ax = plt.subplots(figsize=(6,4))
-        sns.histplot(df[col], kde=True, ax=ax)
-        ax.set_title(f'Distribution of {col}')
-        fig.savefig(f'{plot_dir}/02_hist_{col}.png')
-        plt.close(fig)
-
-    # ===============================
-    # 4. BIVARIATE ANALYSIS
-    # ===============================
-    print("\n===== 4. BIVARIATE ANALYSIS =====")
-
-    for col in numeric_cols:
-        if col != 'Engine Condition':
-            fig, ax = plt.subplots(figsize=(6,4))
-            sns.boxplot(x='Engine Condition', y=col, data=df, ax=ax)
-            ax.set_title(f'{col} vs Engine Condition')
-            fig.savefig(f'{plot_dir}/03_box_{col}.png')
-            plt.close(fig)
-
-    # ===============================
-    # 5. MULTIVARIATE ANALYSIS
-    # ===============================
-    print("\n===== 5. MULTIVARIATE ANALYSIS =====")
-
+    
     fig, ax = plt.subplots(figsize=(10,8))
     corr = df[numeric_cols].corr()
-    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', ax=ax, vmin=-1, vmax=1)
     ax.set_title('Feature Correlation Heatmap')
-    fig.savefig(f'{plot_dir}/04_correlation_heatmap.png')
+    fig.savefig(f'{plot_dir}/02_correlation_heatmap.png', bbox_inches='tight')
     plt.close(fig)
 
     # ===============================
-    # 6. OUTLIER ANALYSIS
+    # 4. MULTIVARIATE PAIRPLOT (NO UNIVARIATE DIAGONALS)
     # ===============================
-    print("\n===== 6. OUTLIER ANALYSIS =====")
-
-    pressure_cols = ['Lub oil pressure', 'Fuel pressure', 'Coolant pressure']
-    existing_cols = [col for col in pressure_cols if col in df.columns]
-
-    if existing_cols:
-        fig, ax = plt.subplots(figsize=(12,6))
-        sns.boxplot(data=df[existing_cols], ax=ax)
-        ax.set_title('Pressure Feature Outliers')
-        fig.savefig(f'{plot_dir}/05_pressure_outliers.png')
-        plt.close(fig)
+    print("\n===== 4. GENERATING MULTIVARIATE PAIRPLOT =====")
+    
+    df_sample = df.sample(n=min(1000, len(df)), random_state=42) if len(df) > 1000 else df
+    
+    g = sns.pairplot(df_sample, hue='Engine Condition', corner=True, palette='Set1', 
+                     plot_kws={'alpha':0.6}, diag_kind=None)
+    g.fig.suptitle('Multivariate Feature Interactions', y=1.02, fontsize=16)
+    g.savefig(f'{plot_dir}/03_multivariate_pairplot.png', bbox_inches='tight')
+    plt.close(g.fig)
 
     # ===============================
-    # 7. CLASS-WISE ANALYSIS
+    # 5. CLASS-WISE ANALYSIS & INDIVIDUAL PLOTS
     # ===============================
-    print("\n===== 7. CLASS-WISE FEATURE ANALYSIS =====")
-
+    print("\n===== 5. CALCULATING & PLOTTING CLASS-WISE MEANS =====")
     if 'Engine Condition' in df.columns:
+        # Calculate and save the CSV
         class_mean = df.groupby('Engine Condition').mean()
-        print(class_mean)
-        class_mean.to_csv(f'{plot_dir}/classwise_means.csv')
-    print(f"\nEDA Complete. Plots saved to {plot_dir}/")
-
+        class_mean.to_csv(f'{plot_dir}/04_classwise_means.csv')
+        
+        # Generate Separate Subplots for Each Sensor
+        features = class_mean.columns
+        num_features = len(features)
+        
+        # Create a 2-row by 3-column grid (adjusts automatically based on feature count)
+        cols = 3
+        rows = math.ceil(num_features / cols)
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(15, 5 * rows))
+        fig.suptitle('Average Sensor Values: Healthy (0) vs. Faulty (1) Engines', fontsize=16, y=1.02)
+        
+        axes = axes.flatten() # Flatten the 2D array of axes for easy iteration
+        
+        for i, feature in enumerate(features):
+            sns.barplot(
+                x=class_mean.index, 
+                y=class_mean[feature], 
+                ax=axes[i], 
+                hue=class_mean.index, 
+                palette='Set1', 
+                legend=False
+            )
+            axes[i].set_title(f'{feature}')
+            axes[i].set_ylabel('Mean Value')
+            axes[i].set_xlabel('Engine Condition')
+            
+        # Hide any unused subplots (e.g., if you have 5 features in a 6-slot grid)
+        for j in range(i + 1, len(axes)):
+            fig.delaxes(axes[j])
+            
+        plt.tight_layout()
+        # Save as a new file name to clearly differentiate it from the old grouped barplot
+        fig.savefig(f'{plot_dir}/05_classwise_means_subplots.png', bbox_inches='tight')
+        plt.close(fig)
+        
+    print(f"\nEDA Complete. Assets saved to {plot_dir}/")
 
 if __name__ == "__main__":
-    perform_eda('Predictive_Maintenance/data/engine_data.csv')
+    perform_eda('Predictive_Maintenance/data/processed_engine_data.csv')
