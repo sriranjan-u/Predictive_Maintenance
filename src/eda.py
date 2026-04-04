@@ -17,14 +17,14 @@ def perform_eda(df_path):
     sns.set_theme(style="whitegrid")
 
     # ===============================
-    # 1. DATA OVERVIEW
+    # DATA OVERVIEW
     # ===============================
     print("\n===== 1. DATA OVERVIEW =====")
     print("Shape:", df.shape)
     print("\nSummary Statistics:\n", df.describe())
 
     # ===============================
-    # 2. TARGET DISTRIBUTION
+    # TARGET DISTRIBUTION
     # ===============================
     print("\n===== 2. GENERATING TARGET DISTRIBUTION =====")
     fig, ax = plt.subplots(figsize=(6,4))
@@ -36,7 +36,7 @@ def perform_eda(df_path):
     plt.close(fig)
 
     # ===============================
-    # 3. CORRELATION HEATMAP
+    # CORRELATION HEATMAP
     # ===============================
     print("\n===== 3. GENERATING CORRELATION HEATMAP =====")
     numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
@@ -49,7 +49,7 @@ def perform_eda(df_path):
     plt.close(fig)
 
     # ===============================
-    # 4. MULTIVARIATE PAIRPLOT (NO UNIVARIATE DIAGONALS)
+    # MULTIVARIATE PAIRPLOT (NO UNIVARIATE DIAGONALS)
     # ===============================
     print("\n===== 4. GENERATING MULTIVARIATE PAIRPLOT =====")
     
@@ -62,7 +62,7 @@ def perform_eda(df_path):
     plt.close(g.fig)
 
     # ===============================
-    # 5. CLASS-WISE ANALYSIS & INDIVIDUAL PLOTS
+    # CLASS-WISE ANALYSIS & INDIVIDUAL PLOTS
     # ===============================
     print("\n===== 5. CALCULATING & PLOTTING CLASS-WISE MEANS =====")
     if 'Engine Condition' in df.columns:

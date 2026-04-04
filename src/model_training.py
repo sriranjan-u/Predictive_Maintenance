@@ -14,7 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
+from xgboost import XGBClassifier
 
 def train_model():
     print("\n===== LOADING TRAIN & TEST FROM HUGGING FACE =====")
@@ -37,20 +37,20 @@ def train_model():
     X_test = test_df.drop('Engine Condition', axis=1)
     y_test = test_df['Engine Condition']
 
-    # Scaling
+    # Scaling (Required for Logistic Regression and SVM)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    # Models
+    # Models (Aligned exactly with your required list)
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000),
         "Decision Tree": DecisionTreeClassifier(),
         "Random Forest": RandomForestClassifier(),
-        "Gradient Boosting": GradientBoostingClassifier(),
         "AdaBoost": AdaBoostClassifier(),
-        "SVM": SVC(probability=True),
-        "KNN": KNeighborsClassifier()
+        "Gradient Boosting": GradientBoostingClassifier(),
+        "XGBoost": XGBClassifier(eval_metric='logloss'),
+        "SVM": SVC(probability=True)
     }
 
     results = []
@@ -62,13 +62,14 @@ def train_model():
     best_recall = 0
     best_model_name = ""
 
-    print("\n===== TRAINING MODELS =====")
+    print("\n===== TRAINING BASELINE MODELS =====")
 
     for name, model in models.items():
 
         with mlflow.start_run(run_name=name):
-
-            if name in ["Logistic Regression", "SVM", "KNN"]:
+            
+            # Use scaled data for distance/linear based models, raw data for tree-based
+            if name in ["Logistic Regression", "SVM"]:
                 model.fit(X_train_scaled, y_train)
                 y_pred = model.predict(X_test_scaled)
             else:
@@ -80,8 +81,7 @@ def train_model():
             rec = recall_score(y_test, y_pred)
             f1 = f1_score(y_test, y_pred)
 
-            print(f"\n{name}")
-            print(f"Accuracy: {acc:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
+            print(f"{name} \u2192 Accuracy: {acc:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
 
             mlflow.log_metric("accuracy", acc)
             mlflow.log_metric("precision", prec)
@@ -102,7 +102,7 @@ def train_model():
     baseline_df = baseline_df.sort_values(by="Recall", ascending=False)
 
     print("\n===== BASELINE MODEL COMPARISON =====")
-    print(baseline_df)
+    print(baseline_df.to_string(index=False))
 
     print("\n===== BEST BASE MODEL =====")
     print(f"{best_model_name} (Recall: {best_recall:.4f})")
@@ -129,6 +129,16 @@ def train_model():
     )
     gb_grid.fit(X_train, y_train)
     tuned_models["Gradient Boosting"] = gb_grid.best_estimator_
+    
+    # Added XGBoost to the tuning grid
+    xgb_grid = GridSearchCV(
+        XGBClassifier(eval_metric='logloss'),
+        {"n_estimators": [100, 200], "learning_rate": [0.05, 0.1], "max_depth": [3, 5]},
+        scoring='recall',
+        cv=3
+    )
+    xgb_grid.fit(X_train, y_train)
+    tuned_models["XGBoost"] = xgb_grid.best_estimator_
 
     svm_grid = GridSearchCV(
         SVC(probability=True),
@@ -179,7 +189,7 @@ def train_model():
     comparison_df = pd.concat([baseline_df, tuned_df])
 
     print("\n===== PERFORMANCE COMPARISON =====")
-    print(comparison_df.sort_values(by=["Model", "Type"]))
+    print(comparison_df.sort_values(by=["Model", "Type"]).to_string(index=False))
 
     # Save comparison
     os.makedirs("Predictive_Maintenance/reports", exist_ok=True)
@@ -192,11 +202,18 @@ def train_model():
 
     # Save pipeline
     print("\n===== SAVING FINAL PIPELINE =====")
-
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("model", best_tuned_model)
-    ])
+    
+    # Use the best model found (either tuned or baseline)
+    # If the best model requires scaling (e.g., SVM), include the scaler in the pipeline
+    if best_tuned_name in ["Logistic Regression", "SVM"]:
+        pipeline = Pipeline([
+            ("scaler", StandardScaler()),
+            ("model", best_tuned_model)
+        ])
+    else:
+        pipeline = Pipeline([
+            ("model", best_tuned_model)
+        ])
 
     pipeline.fit(X_train, y_train)
 

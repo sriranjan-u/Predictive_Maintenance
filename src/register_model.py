@@ -12,23 +12,27 @@ def register_artifacts():
 
     print("Initiating automated model registry...")
 
-    # 2. Upload model
+    # 2. Upload the unified Pipeline (contains BOTH the Scaler and the Model)
+    print("Uploading unified engine pipeline...")
     api.upload_file(
-        path_or_fileobj="Predictive_Maintenance/models/engine_pipeline.joblib", # Corrected filename
-        path_in_repo="engine_pipeline.joblib", # Keep the path in repo as engine_model.joblib for consistency with app.py
+        path_or_fileobj="Predictive_Maintenance/models/engine_pipeline.joblib",
+        path_in_repo="engine_pipeline.joblib",
         repo_id=repo_id,
         repo_type="model"
     )
 
-    # 3. Upload scaler
-    api.upload_file(
-        path_or_fileobj="Predictive_Maintenance/models/scaler.pkl",
-        path_in_repo="scaler.pkl",
-        repo_id=repo_id,
-        repo_type="model"
-    )
+    # 3. Upload the Model Comparison Report (Great for tracking performance over time)
+    report_path = "Predictive_Maintenance/reports/model_comparison.csv"
+    if os.path.exists(report_path):
+        print("Uploading performance comparison report...")
+        api.upload_file(
+            path_or_fileobj=report_path,
+            path_in_repo="reports/model_comparison.csv",
+            repo_id=repo_id,
+            repo_type="model"
+        )
 
-    print("Model & scaler successfully registered to Hugging Face")
+    print("Unified Pipeline and artifacts successfully registered to Hugging Face!")
 
 if __name__ == "__main__":
     register_artifacts()

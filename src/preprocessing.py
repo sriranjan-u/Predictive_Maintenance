@@ -8,7 +8,7 @@ from huggingface_hub import HfApi
 def clean_and_register_data(repo_id):
     print("===== STARTING DATA PREPARATION & CLEANING =====")
     
-    # 1. Load from Hub
+    # Load from Hub
     url = f"https://huggingface.co/datasets/{repo_id}/raw/main/engine_data.csv"
     try:
         df = pd.read_csv(url)
@@ -21,7 +21,7 @@ def clean_and_register_data(repo_id):
     df_raw = df.copy()
 
     # ==========================================
-    # 2. IQR OUTLIER CAPPING (THE CLEANING PHASE)
+    # IQR OUTLIER CAPPING (THE CLEANING PHASE)
     # ==========================================
     sensor_cols = ['Lub oil pressure', 'Fuel pressure', 'Coolant pressure', 'lub oil temp', 'Coolant temp', 'Engine rpm']
     
@@ -41,7 +41,7 @@ def clean_and_register_data(repo_id):
     print("IQR Capping successfully applied.")
 
     # ==========================================
-    # 3. VISUALIZATION: Before & After + Scatter
+    # VISUALIZATION: Before & After + Scatter
     # ==========================================
     print("Generating and displaying Before/After and Scatter plots...")
     plot_dir = 'Predictive_Maintenance/plots/'
@@ -71,7 +71,7 @@ def clean_and_register_data(repo_id):
             plt.close(fig) # Prevent duplicate inline rendering if running locally
 
     # ==========================================
-    # NEW: Side-by-Side Scatter Plot Comparison
+    # Side-by-Side Scatter Plot Comparison
     # ==========================================
     if all(c in df.columns for c in ['Lub oil pressure', 'Coolant pressure', 'Engine Condition']):
         fig, axes = plt.subplots(1, 2, figsize=(16, 6))
@@ -92,7 +92,7 @@ def clean_and_register_data(repo_id):
     print(f"All plots successfully generated and saved to {plot_dir}/")
 
     # ==========================================
-    # 4. Save Full Processed Dataset & Split
+    # Save Full Processed Dataset & Split
     # ==========================================
     print("Saving the full processed dataset and splitting into Train/Test...")
     os.makedirs('Predictive_Maintenance/data', exist_ok=True)
@@ -111,7 +111,7 @@ def clean_and_register_data(repo_id):
     print("Train and Test splits saved locally.")
 
     # ==========================================
-    # 5. Cloud Upload (Hugging Face)
+    # Cloud Upload (Hugging Face)
     # ==========================================
     token = os.getenv("HF_TOKEN")
     if token:
