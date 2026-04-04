@@ -23,7 +23,6 @@ def clean_and_register_data(repo_id):
     # ==========================================
     # 2. IQR OUTLIER CAPPING (THE CLEANING PHASE)
     # ==========================================
-    # We include Engine rpm here as it is highly prone to extreme spikes
     sensor_cols = ['Lub oil pressure', 'Fuel pressure', 'Coolant pressure', 'lub oil temp', 'Coolant temp', 'Engine rpm']
     
     print(f"Applying IQR Capping to {len(sensor_cols)} sensor columns to neutralize extreme outliers...")
@@ -37,7 +36,6 @@ def clean_and_register_data(repo_id):
             lower_bound = Q1 - 1.5 * IQR
             upper_bound = Q3 + 1.5 * IQR
             
-            # The .clip() function forces outliers to sit exactly on the boundary fences
             df[col] = df[col].clip(lower=lower_bound, upper=upper_bound)
             
     print("IQR Capping successfully applied.")
@@ -45,8 +43,8 @@ def clean_and_register_data(repo_id):
     # ==========================================
     # 3. VISUALIZATION: Before & After + Scatter
     # ==========================================
-    print("Generating Before/After and Scatter plots...")
-    plot_dir = 'Predictive_Maintenance/plots/preprocessing'
+    print("Generating and displaying Before/After and Scatter plots...")
+    plot_dir = 'Predictive_Maintenance/plots/'
     os.makedirs(plot_dir, exist_ok=True)
     sns.set_theme(style="whitegrid")
 
@@ -70,40 +68,64 @@ def clean_and_register_data(repo_id):
 
             plt.tight_layout()
             plt.savefig(f'{plot_dir}/{col}_outlier_treatment.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
+            plt.close(fig) # Prevent duplicate inline rendering if running locally
 
-    # Scatter Plots (Feature Relationships after cleaning)
+    # ==========================================
+    # NEW: Side-by-Side Scatter Plot Comparison
+    # ==========================================
     if all(c in df.columns for c in ['Lub oil pressure', 'Coolant pressure', 'Engine Condition']):
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.scatterplot(data=df, x='Lub oil pressure', y='Coolant pressure', hue='Engine Condition', alpha=0.6, palette='Set1', ax=ax)
-        ax.set_title('Scatter: Lub Oil Pressure vs Coolant Pressure (Post-Cleaning)')
-        plt.savefig(f'{plot_dir}/scatter_lub_vs_coolant.png', dpi=300, bbox_inches='tight')
-        plt.close(fig)
+        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        fig.suptitle('Feature Interaction: Lub Oil Pressure vs Coolant Pressure', fontsize=16, y=1.05)
 
-    print(f"Plots successfully saved to {plot_dir}/")
+        # Before (Raw Data)
+        sns.scatterplot(data=df_raw, x='Lub oil pressure', y='Coolant pressure', hue='Engine Condition', alpha=0.6, palette='Set1', ax=axes[0])
+        axes[0].set_title('Before Capping: Raw Data (Extreme Outliers Visible)')
+
+        # After (Cleaned Data)
+        sns.scatterplot(data=df, x='Lub oil pressure', y='Coolant pressure', hue='Engine Condition', alpha=0.6, palette='Set1', ax=axes[1])
+        axes[1].set_title('After Capping: Clean Data Clusters')
+
+        plt.tight_layout()
+        plt.savefig(f'{plot_dir}/scatter_lub_vs_coolant_comparison.png', dpi=300, bbox_inches='tight')
+        plt.show()  # Display this specific comparison directly in Colab
+
+    print(f"All plots successfully generated and saved to {plot_dir}/")
 
     # ==========================================
-    # 4. Train-Test Split & Cloud Upload
+    # 4. Save Full Processed Dataset & Split
     # ==========================================
-    print("Splitting data into Train and Test sets...")
+    print("Saving the full processed dataset and splitting into Train/Test...")
+    os.makedirs('Predictive_Maintenance/data', exist_ok=True)
+    
+    # Save the full processed dataset
+    processed_path = 'Predictive_Maintenance/data/processed_engine_data.csv'
+    df.to_csv(processed_path, index=False)
+
+    # Train-Test Split
     train, test = train_test_split(df, test_size=0.2, random_state=42, stratify=df['Engine Condition'])
 
-    # Save Locally
-    os.makedirs('Predictive_Maintenance/data', exist_ok=True)
     train_path = 'Predictive_Maintenance/data/train.csv'
     test_path = 'Predictive_Maintenance/data/test.csv'
     train.to_csv(train_path, index=False)
     test.to_csv(test_path, index=False)
-    print("Local split complete.")
+    print("Train and Test splits saved locally.")
 
-    # Upload back to HF Dataset Space
+    # ==========================================
+    # 5. Cloud Upload (Hugging Face)
+    # ==========================================
     token = os.getenv("HF_TOKEN")
     if token:
         print("Initiating upload to Hugging Face...")
         api = HfApi(token=token)
+        
+        # Upload Full Processed Data
+        api.upload_file(path_or_fileobj=processed_path, path_in_repo="processed_engine_data.csv", repo_id=repo_id, repo_type="dataset")
+        # Upload Train Data
         api.upload_file(path_or_fileobj=train_path, path_in_repo="train.csv", repo_id=repo_id, repo_type="dataset")
+        # Upload Test Data
         api.upload_file(path_or_fileobj=test_path, path_in_repo="test.csv", repo_id=repo_id, repo_type="dataset")
-        print(f"Train and Test sets uploaded to HF Dataset: {repo_id}")
+        
+        print(f"Full processed dataset, Train, and Test sets uploaded to HF Dataset: {repo_id}")
     else:
         print("HF_TOKEN not found. Cloud upload skipped.")
 
