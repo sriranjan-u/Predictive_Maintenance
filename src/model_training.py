@@ -88,7 +88,8 @@ def train_model():
             mlflow.log_metric("recall", rec)
             mlflow.log_metric("f1_score", f1)
 
-            mlflow.sklearn.log_model(model, name=name)
+            #mlflow.sklearn.log_model(model, name=name)
+            mlflow.sklearn.log_model(model, artifact_path=name)
 
             results.append([name, acc, prec, rec, f1])
 
