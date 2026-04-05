@@ -20,7 +20,7 @@ jobs:
       - name: Check code formatting
         run: |
           pip install flake8
-          flake8 Predictive_Maintenance/src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
 
   # STAGE 1: Data Ingestion & Registration
   data-ingestion:
