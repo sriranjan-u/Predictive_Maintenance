@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ] 
 
+# 🛠️ THE FIX: Forces all GitHub Actions to use Node.js 24 to silence the deprecation warning
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # 🛡️ STAGE 0: Quality Gate
   code-quality:
@@ -27,7 +31,6 @@ jobs:
     name: Data Ingestion & Registration
     needs: code-quality 
     runs-on: ubuntu-latest
-    # Removed the working-directory block from here!
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -47,7 +50,6 @@ jobs:
     name: Data Preparation
     needs: data-ingestion
     runs-on: ubuntu-latest
-    # Removed the working-directory block from here!
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -67,7 +69,6 @@ jobs:
     name: Model Training & Registration
     needs: data-prep
     runs-on: ubuntu-latest
-    # Removed the working-directory block from here!
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -100,6 +101,5 @@ jobs:
           git config --global user.email "sriranjan.u@gmail.com"
           git config --global user.name "sriranjan-u"
           
-          # Since the app.py is at the root, a standard force push is exactly what HF needs
           git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance
           git push --force https://Sriranjan:$HF_TOKEN@huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance main

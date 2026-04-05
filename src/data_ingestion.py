@@ -7,9 +7,10 @@ import pandas as pd
 repo_id = "Sriranjan/Predictive_Maintenance_Data"
 repo_type = "dataset"
 
-# Get token from environment or direct input
-# Note: In Colab, we will pass this via os.environ in the next step
+# Get token from environment
 token = os.getenv("HF_TOKEN")
+if not token:
+    raise ValueError("HF_TOKEN environment variable not found! Check GitHub Secrets.")
 
 print("Initializing Hugging Face API Client...")
 api = HfApi(token=token)
@@ -23,10 +24,10 @@ except RepositoryNotFoundError:
     create_repo(repo_id=repo_id, repo_type=repo_type, private=False, token=token)
     print(f"Repository '{repo_id}' created successfully.")
 
-# Step 2: Upload the data folder
-print(f"Uploading data from Predictive_Maintenance/data to {repo_id}...")
+# Step 2: Upload the data folder (FIXED PATH)
+print(f"Uploading data from local 'data/' directory to {repo_id}...")
 api.upload_folder(
-    folder_path="Predictive_Maintenance/data",
+    folder_path="data", # <-- This is the crucial path fix!
     repo_id=repo_id,
     repo_type=repo_type,
 )
