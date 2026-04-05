@@ -112,19 +112,21 @@ jobs:
           git config --global user.email "sriranjan.u@gmail.com"
           git config --global user.name "sriranjan-u"
           
-          #Install and Initialize LFS
+          # 1. Initialize LFS
           git lfs install
           
-          #Force track the extensions
+          # 2. Track the files
           git lfs track "*.png"
           git lfs track "*.pkl"
           git lfs track "*.joblib"
           git add .gitattributes
           
-          # Migrate existing files in history to LFS
-          # This converts the "offending files" into LFS pointers
+          # 3. Commit the tracking rules first to make the "working copy" clean
+          git commit -m "Update LFS tracking attributes" || echo "No changes to commit"
+          
+          # 4. Now run migration on a clean working copy
           git lfs migrate import --everything --include="*.png,*.pkl,*.joblib"
           
-          #Push to Hugging Face
+          # 5. Push to Hugging Face
           git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance || true
           git push --force huggingface main
