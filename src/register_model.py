@@ -15,14 +15,14 @@ def register_artifacts():
     # 2. Upload the unified Pipeline (contains BOTH the Scaler and the Model)
     print("Uploading unified engine pipeline...")
     api.upload_file(
-        path_or_fileobj="Predictive_Maintenance/models/engine_pipeline.joblib",
+        path_or_fileobj="models/engine_pipeline.joblib",
         path_in_repo="engine_pipeline.joblib",
         repo_id=repo_id,
         repo_type="model"
     )
 
     # 3. Upload the Model Comparison Report (Great for tracking performance over time)
-    report_path = "Predictive_Maintenance/reports/model_comparison.csv"
+    report_path = "reports/model_comparison.csv"
     if os.path.exists(report_path):
         print("Uploading performance comparison report...")
         api.upload_file(
