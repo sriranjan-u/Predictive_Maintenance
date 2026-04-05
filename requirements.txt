@@ -6,3 +6,4 @@ seaborn
 huggingface_hub
 xgboost
 streamlit
+mlflow

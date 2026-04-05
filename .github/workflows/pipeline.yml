@@ -6,12 +6,12 @@ on:
   pull_request:
     branches: [ main ] 
 
-# 🛠️ THE FIX: Forces all GitHub Actions to use Node.js 24 to silence the deprecation warning
+# THE FIX: Forces all GitHub Actions to use Node.js 24 to silence the deprecation warning
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # 🛡️ STAGE 0: Quality Gate
+  # STAGE 0: Quality Gate
   code-quality:
     name: Lint & Code Quality
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
           pip install flake8
           flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
 
-  # 📦 STAGE 1: Data Ingestion & Registration
+  # STAGE 1: Data Ingestion & Registration
   data-ingestion:
     name: Data Ingestion & Registration
     needs: code-quality 
@@ -45,7 +45,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/data_ingestion.py
 
-  # 🧹 STAGE 2: Data Preparation
+  # STAGE 2: Data Preparation
   data-prep:
     name: Data Preparation
     needs: data-ingestion
@@ -58,13 +58,13 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt  # <--- THIS IS THE FIX
+        run: pip install -r requirements.txt  
       - name: Run Preprocessing
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/preprocessing.py
 
-  # 🧠 STAGE 3: Model Training & Registration
+  # STAGE 3: Model Training & Registration
   model-training:
     name: Model Training & Registration
     needs: data-prep
@@ -77,17 +77,13 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt  
       - name: Train Models
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/model_training.py
-      - name: Register Best Model
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python src/register_model.py
 
-  # 🚀 STAGE 4: Deployment
+  # STAGE 4: Deployment
   deploy-hosting:
     name: Deploy to Streamlit / HF Spaces
     needs: model-training
