@@ -6,12 +6,10 @@ on:
   pull_request:
     branches: [ main ] 
 
-# GLOBAL CONFIG: Forces all GitHub Actions to use Node.js 24
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # STAGE 0: Quality Gate
   code-quality:
     name: Lint & Code Quality
     runs-on: ubuntu-latest
@@ -26,7 +24,6 @@ jobs:
           pip install flake8
           flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
 
-  # STAGE 1: Data Ingestion & Registration
   data-ingestion:
     name: Data Ingestion & Registration
     needs: code-quality 
@@ -48,9 +45,8 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/data_ingestion.py
 
-  # STAGE 2: Data Preparation
   data-prep:
-    name: Data Preparation
+    name: Data Preparation & EDA
     needs: data-ingestion
     runs-on: ubuntu-latest
     steps:
@@ -65,14 +61,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install "setuptools<70.0.0"
           pip install -r requirements.txt
+      - name: Run EDA
+        run: python src/eda.py  # <--- Added EDA Script
       - name: Run Preprocessing
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/preprocessing.py
 
-  # STAGE 3: Model Training & Registration
   model-training:
-    name: Model Training & Registration
+    name: Model Training & Visualization
     needs: data-prep
     runs-on: ubuntu-latest
     steps:
@@ -91,12 +88,13 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/model_training.py
+      - name: Generate Metric Visualizations
+        run: python src/visualize_metrics.py # <--- Added Visualization Script
       - name: Register Best Model
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/register_model.py
 
-  # STAGE 4: Deployment
   deploy-hosting:
     name: Deploy to Streamlit / HF Spaces
     needs: model-training
@@ -104,28 +102,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for HF push
+          fetch-depth: 0 
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git config --global user.email "sriranjan.u@gmail.com"
           git config --global user.name "sriranjan-u"
-          
-          # Initialize LFS
           git lfs install
-          
-          # Track the files and commit the attributes
           git lfs track "*.png"
           git lfs track "*.pkl"
           git lfs track "*.joblib"
           git add .gitattributes
-          git commit -m "Prepare LFS attributes" || echo "No changes"
-          
-          # FORCE MIGRATION (The "Yes" and "No-Rewrite" flags are key)
-          # This handles the "override changes?" prompt automatically
+          git commit -m "Update LFS assets and visualizations" || echo "No changes"
           git lfs migrate import --everything --include="*.png,*.pkl,*.joblib" --yes
-
-          # Final push to Hugging Face
           git remote add huggingface https://Sriranjan:$HF_TOKEN@huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance || true
           git push --force huggingface main
