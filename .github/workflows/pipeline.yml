@@ -125,7 +125,7 @@ jobs:
           # FORCE MIGRATION (The "Yes" and "No-Rewrite" flags are key)
           # This handles the "override changes?" prompt automatically
           git lfs migrate import --everything --include="*.png,*.pkl,*.joblib" --yes
-          
+
           # Final push to Hugging Face
-          git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance || true
+          git remote add huggingface https://Sriranjan:$HF_TOKEN@huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance || true
           git push --force huggingface main
