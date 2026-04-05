@@ -58,7 +58,7 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt  # <--- THIS IS THE FIX
       - name: Run Preprocessing
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
