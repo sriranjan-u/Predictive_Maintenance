@@ -8,3 +8,4 @@ datasets
 xgboost
 streamlit
 mlflow
+setuptools<70.0.0

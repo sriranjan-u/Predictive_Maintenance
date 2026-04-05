@@ -39,7 +39,10 @@ jobs:
           python-version: '3.9'
           cache: 'pip' 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install "setuptools<70.0.0"
+          pip install -r requirements.txt
       - name: Run Data Ingestion
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -58,7 +61,10 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install "setuptools<70.0.0"
+          pip install -r requirements.txt
       - name: Run Preprocessing
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -77,7 +83,10 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install "setuptools<70.0.0"
+          pip install -r requirements.txt
       - name: Train Models
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
