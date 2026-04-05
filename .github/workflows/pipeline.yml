@@ -1,4 +1,4 @@
-name: Predictive Maintenance MLOps Pipeline
+name: Car Predictive Maintenance MLOps Pipeline
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ main ] 
 
-# THE FIX: Forces all GitHub Actions to use Node.js 24 to silence the deprecation warning
+# GLOBAL CONFIG: Forces all GitHub Actions to use Node.js 24
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -58,7 +58,7 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt  
+        run: pip install -r requirements.txt
       - name: Run Preprocessing
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -77,11 +77,15 @@ jobs:
           python-version: '3.9'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt  
+        run: pip install -r requirements.txt
       - name: Train Models
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python src/model_training.py
+      - name: Register Best Model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python src/register_model.py
 
   # STAGE 4: Deployment
   deploy-hosting:
@@ -97,5 +101,6 @@ jobs:
           git config --global user.email "sriranjan.u@gmail.com"
           git config --global user.name "sriranjan-u"
           
+          # Force push the root repository to the Hugging Face Space
           git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance
           git push --force https://Sriranjan:$HF_TOKEN@huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance main
