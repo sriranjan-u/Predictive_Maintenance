@@ -67,7 +67,7 @@ def train_model():
     for name, model in models.items():
 
         with mlflow.start_run(run_name=name):
-            
+
             # Use scaled data for distance/linear based models, raw data for tree-based
             if name in ["Logistic Regression", "SVM"]:
                 model.fit(X_train_scaled, y_train)
@@ -129,7 +129,7 @@ def train_model():
     )
     gb_grid.fit(X_train, y_train)
     tuned_models["Gradient Boosting"] = gb_grid.best_estimator_
-    
+
     # Added XGBoost to the tuning grid
     xgb_grid = GridSearchCV(
         XGBClassifier(eval_metric='logloss'),
@@ -192,8 +192,8 @@ def train_model():
     print(comparison_df.sort_values(by=["Model", "Type"]).to_string(index=False))
 
     # Save comparison
-    os.makedirs("Predictive_Maintenance/reports", exist_ok=True)
-    comparison_path = "Predictive_Maintenance/reports/model_comparison.csv"
+    os.makedirs("reports", exist_ok=True)
+    comparison_path = "reports/model_comparison.csv"
     comparison_df.to_csv(comparison_path, index=False)
 
     mlflow.log_artifact(comparison_path)
@@ -202,7 +202,7 @@ def train_model():
 
     # Save pipeline
     print("\n===== SAVING FINAL PIPELINE =====")
-    
+
     # Use the best model found (either tuned or baseline)
     # If the best model requires scaling (e.g., SVM), include the scaler in the pipeline
     if best_tuned_name in ["Logistic Regression", "SVM"]:
@@ -217,8 +217,8 @@ def train_model():
 
     pipeline.fit(X_train, y_train)
 
-    os.makedirs("Predictive_Maintenance/models", exist_ok=True)
-    model_path = "Predictive_Maintenance/models/engine_pipeline.joblib"
+    os.makedirs("models", exist_ok=True)
+    model_path = "models/engine_pipeline.joblib"
 
     joblib.dump(pipeline, model_path)
     mlflow.log_artifact(model_path)
