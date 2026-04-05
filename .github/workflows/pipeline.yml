@@ -104,8 +104,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # <--- FIX 1: Fetch all history for all branches and tags
-
+          fetch-depth: 0 # Required for HF push
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -113,8 +112,12 @@ jobs:
           git config --global user.email "sriranjan.u@gmail.com"
           git config --global user.name "sriranjan-u"
           
-          # FIX 2: Ensure the repo is not shallow before pushing
-          git fetch --unshallow || true 
+          # Initialize LFS for binary files (Images & Models)
+          git lfs install
+          git lfs track "*.png"
+          git lfs track "*.pkl"
+          git lfs track "*.joblib"
+          git add .gitattributes
           
-          git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance
+          git remote add huggingface https://huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance || true
           git push --force https://Sriranjan:$HF_TOKEN@huggingface.co/spaces/Sriranjan/Car_Predictive_Maintenance main
