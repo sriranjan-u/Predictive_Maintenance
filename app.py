@@ -7,19 +7,15 @@ import os
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="AI Engine Diagnostic", page_icon="🏎️", layout="wide")
 
-# --- CUSTOM THEME CSS ---
+# --- CUSTOM THEME CSS (Streamlined UI) ---
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    [data-testid="stMetricValue"] { font-size: 28px; color: #1f77b4; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #1f77b4; color: white; }
-    .prediction-card {
-        padding: 20px;
-        border-radius: 10px;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        text-align: center;
-    }
+    .main { background-color: #f8f9fa; }
+    [data-testid="stMetricValue"] { font-size: 24px; color: #007bff; }
+    .stButton>button { border-radius: 8px; height: 3.5em; background: linear-gradient(to right, #007bff, #0056b3); color: white; font-weight: bold; }
+    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; }
+    /* Compact Sidebar */
+    section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -31,41 +27,48 @@ def load_model():
 
 model = load_model()
 
-# --- SIDEBAR: INPUT CONTROLS ---
+# --- SIDEBAR: COMPACT CONTROLS ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/car-service.png", width=80)
-    st.header("Diagnostic Inputs")
-    st.info("Adjust sliders to simulate live engine telemetry.")
+    st.header("🕹️ Telemetry Control")
     
-    with st.expander("🌡️ Temperature Settings", expanded=True):
-        lub_t = st.slider("Lub Oil Temp (°C)", 60, 100, 77)
-        cool_t = st.slider("Coolant Temp (°C)", 60, 100, 78)
+    # 🌡️ Temperature Group (Side-by-Side)
+    st.markdown("**Thermal Sensors**")
+    t_col1, t_col2 = st.columns(2)
+    with t_col1:
+        lub_t = st.number_input("Lub Oil (°C)", 60, 100, 77)
+    with t_col2:
+        cool_t = st.number_input("Coolant (°C)", 60, 100, 78)
         
-    with st.expander("🧪 Pressure Settings", expanded=True):
-        fuel_p = st.slider("Fuel Pressure (bar)", 0.0, 20.0, 6.6)
-        lub_p = st.slider("Lub Oil Pressure (bar)", 0.0, 10.0, 3.3)
-        cool_p = st.slider("Coolant Pressure (bar)", 0.0, 10.0, 2.3)
-        
-    with st.expander("⚙️ Engine Speed", expanded=True):
-        rpm = st.number_input("RPM", 0, 3000, 800)
+    st.divider()
 
-# --- MAIN CONTENT ---
+    # 🧪 Pressure Group (Compact Layout)
+    st.markdown("**Pressure Sensors (bar)**")
+    p_col1, p_col2 = st.columns(2)
+    with p_col1:
+        fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1)
+        cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1)
+    with p_col2:
+        lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1)
+        rpm = st.number_input("RPM Speed", 0, 3000, 800, step=50)
+
+    st.divider()
+    st.info("💡 Adjust values to run diagnostic.")
+
+# --- MAIN DASHBOARD ---
 st.title("🏎️ Engine Health Diagnostic System")
-st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data")
+st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data [cite: 3]")
 
-# Create a 3-column top row for key metrics
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Lubrication System", f"{lub_p} bar", f"{lub_t}°C")
-with col2:
-    st.metric("Fuel System", f"{fuel_p} bar", "Stable")
-with col3:
-    st.metric("Cooling System", f"{cool_p} bar", f"{cool_t}°C")
+# Metrics Row
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
+m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
+m3.metric("Cooling", f"{cool_p} bar", f"{cool_t}°C")
+m4.metric("Engine Speed", f"{rpm} RPM", "Active")
 
 st.divider()
 
-# Lower Section: Analysis and Visualization
-left_col, right_col = st.columns([1.5, 1])
+# Analysis Section
+left_col, right_col = st.columns([1.2, 1])
 
 with left_col:
     st.subheader("📡 Live Telemetry Stream")
@@ -74,27 +77,26 @@ with left_col:
         'Fuel pressure': [fuel_p], 'Coolant pressure': [cool_p], 
         'lub oil temp': [lub_t], 'Coolant temp': [cool_t]
     })
-    st.table(input_df)
+    st.dataframe(input_df, hide_index=True, use_container_width=True)
     
-    # Simple Visual feedback
-    st.write("Temperature Saturation")
+    st.write("**Thermal Saturation Index**")
     st.progress(max(0, min((cool_t - 60) / 40, 1.0)))
 
 with right_col:
-    st.subheader("🧠 AI Verdict")
-    if st.button("RUN SYSTEM CHECK"):
+    st.subheader("🧠 AI Diagnostic Verdict")
+    if st.button("EXECUTE SYSTEM CHECK"):
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
         
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
-            st.markdown(f"<h1 style='color:green;'>✅ HEALTHY</h1>", unsafe_allow_html=True)
-            st.write(f"System Confidence: **{prob:.1f}%**")
+            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True)
+            st.write(f"Confidence Level: **{prob:.1f}%**")
         else:
-            st.markdown(f"<h1 style='color:red;'>⚠️ FAULT RISK</h1>", unsafe_allow_html=True)
-            st.write(f"System Confidence: **{prob:.1f}%**")
-            st.warning("Immediate inspection required: Abnormal thermal/pressure signature detected.")
+            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True)
+            st.write(f"Failure Probability: **{prob:.1f}%**")
+            st.error("Diagnostic Note: Abnormal thermal-pressure signature detected.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-st.caption("© 2026 MLOps Framework | Developed by Sriranjan Uppoor")
+st.caption(f"© 2026 MLOps Framework | Developed by Sriranjan Uppoor [cite: 4, 292]")
