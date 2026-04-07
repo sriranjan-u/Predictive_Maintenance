@@ -7,22 +7,21 @@ import os
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="AI Engine Diagnostic", page_icon="🏎️", layout="wide")
 
-# --- CUSTOM THEME CSS (Streamlined UI) ---
+# --- CUSTOM THEME CSS ---
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     [data-testid="stMetricValue"] { font-size: 24px; color: #007bff; }
-    .stButton>button { border-radius: 8px; height: 3.5em; background: linear-gradient(to right, #007bff, #0056b3); color: white; font-weight: bold; }
-    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; }
-    /* Compact Sidebar */
+    .stButton>button { border-radius: 8px; height: 3.5em; background: linear-gradient(to right, #007bff, #0056b3); color: white; font-weight: bold; width: 100%; }
+    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; min-height: 200px; }
     section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model():
-    repo_id = "Sriranjan/Predictive_Maintenance_Model"
-    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
+    repo_id = "Sriranjan/Predictive_Maintenance_Model" [cite: 283]
+    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib") [cite: 284]
     return joblib.load(path)
 
 model = load_model()
@@ -31,7 +30,6 @@ model = load_model()
 with st.sidebar:
     st.header("🕹️ Telemetry Control")
     
-    # 🌡️ Temperature Group (Side-by-Side)
     st.markdown("**Thermal Sensors**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
@@ -41,7 +39,6 @@ with st.sidebar:
         
     st.divider()
 
-    # 🧪 Pressure Group (Compact Layout)
     st.markdown("**Pressure Sensors (bar)**")
     p_col1, p_col2 = st.columns(2)
     with p_col1:
@@ -49,10 +46,11 @@ with st.sidebar:
         cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1)
     with p_col2:
         lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1)
-        rpm = st.number_input("RPM Speed", 0, 3000, 800, step=50)
+        # UNIQUE KEY ADDED TO FIX THE FROZEN INPUT
+        current_rpm = st.number_input("RPM Speed", 0, 3000, 800, step=50, key="sidebar_rpm_input")
 
     st.divider()
-    st.info("💡 Adjust values to run diagnostic.")
+    st.info("💡 Values updated in real-time.")
 
 # --- MAIN DASHBOARD ---
 st.title("🏎️ Engine Health Diagnostic System")
@@ -63,7 +61,7 @@ m1, m2, m3, m4 = st.columns(4)
 m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
 m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
 m3.metric("Cooling", f"{cool_p} bar", f"{cool_t}°C")
-m4.metric("Engine Speed", f"{rpm} RPM", "Active")
+m4.metric("Engine Speed", f"{current_rpm} RPM", "Active")
 
 st.divider()
 
@@ -72,10 +70,14 @@ left_col, right_col = st.columns([1.2, 1])
 
 with left_col:
     st.subheader("📡 Live Telemetry Stream")
+    # Mapping the UI variable 'current_rpm' to the model's feature 'Engine rpm'
     input_df = pd.DataFrame({
-        'Engine rpm': [rpm], 'Lub oil pressure': [lub_p], 
-        'Fuel pressure': [fuel_p], 'Coolant pressure': [cool_p], 
-        'lub oil temp': [lub_t], 'Coolant temp': [cool_t]
+        'Engine rpm': [current_rpm], [cite: 72]
+        'Lub oil pressure': [lub_p], [cite: 74]
+        'Fuel pressure': [fuel_p], [cite: 76]
+        'Coolant pressure': [cool_p], [cite: 78]
+        'lub oil temp': [lub_t], [cite: 79]
+        'Coolant temp': [cool_t] [cite: 81]
     })
     st.dataframe(input_df, hide_index=True, use_container_width=True)
     
@@ -91,12 +93,12 @@ with right_col:
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
-            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True) [cite: 47]
             st.write(f"Confidence Level: **{prob:.1f}%**")
         else:
-            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True) [cite: 48]
             st.write(f"Failure Probability: **{prob:.1f}%**")
             st.error("Diagnostic Note: Abnormal thermal-pressure signature detected.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-st.caption(f"© 2026 MLOps Framework | Developed by Sriranjan Uppoor [cite: 4, 292]")
+st.caption(f"© 2026 MLOps Framework | Developed by Sriranjan Uppoor")
