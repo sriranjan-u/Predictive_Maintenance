@@ -7,33 +7,35 @@ import os
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="AI Engine Diagnostic", page_icon="🏎️", layout="wide")
 
-# --- CUSTOM THEME CSS ---
+# --- CUSTOM THEME CSS (Aggressive White-Space Removal) ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    [data-testid="stMetricValue"] { font-size: 24px; color: #007bff; }
-    .stButton>button { 
-        border-radius: 8px; 
-        height: 3.5em; 
-        background: linear-gradient(to right, #007bff, #0056b3); 
-        color: white; 
-        font-weight: bold; 
-        width: 100%; 
-    }
+    /* Reduce top padding of the main block */
+    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
+    
+    /* Style for the main header to stay compact */
+    .main-title { font-size: 32px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; }
+    
+    /* Metric styling */
+    [data-testid="stMetricValue"] { font-size: 22px !important; color: #007bff; }
+    
+    /* Prediction card optimization */
     .prediction-card { 
-        padding: 20px; 
-        border-radius: 12px; 
-        background-color: white; 
+        padding: 15px; 
+        border-radius: 10px; 
+        background-color: #ffffff; 
         border: 1px solid #dee2e6; 
-        text-align: center; 
+        text-align: center;
+        margin-top: -10px;
     }
-    section[data-testid="stSidebar"] { width: 350px !important; }
+    
+    /* Sidebar width and spacing */
+    section[data-testid="stSidebar"] { width: 320px !important; }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model():
-    """Download and load the serialized SVM model pipeline[cite: 283]."""
     repo_id = "Sriranjan/Predictive_Maintenance_Model"
     path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
     return joblib.load(path)
@@ -42,50 +44,50 @@ model = load_model()
 
 # --- SIDEBAR: COMPACT CONTROLS ---
 with st.sidebar:
-    st.header("🌡️ Temperature")
-    
-    # Operational Speed - Moved to top for high visibility
-    st.markdown("**⚙️ Operational Speed**")
-    current_rpm = st.number_input("Engine RPM", 0, 3000, 800, step=50, key="rpm_input_final")
+    # RPM Speed - Top priority
+    current_rpm = st.number_input("⚙️ Engine RPM", 0, 3000, 800, step=50, key="rpm_input")
     
     st.divider()
 
-    # Temperature Group [cite: 80, 81]
-    st.markdown("**🌡️ Temperature Sensors (°C)**")
+    # Temperature Group
+    st.markdown("**🌡️ Temperature (°C)**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
-        lub_t = st.number_input("Lub Oil", 60, 100, 77, key="temp_lub")
+        lub_t = st.number_input("Lub Oil", 60, 100, 77, key="t_l")
     with t_col2:
-        cool_t = st.number_input("Coolant", 60, 100, 78, key="temp_cool")
+        cool_t = st.number_input("Coolant", 60, 100, 78, key="t_c")
         
     st.divider()
 
-    # Pressure Group [cite: 74, 76, 78]
-    st.markdown("**🧪 Pressure Sensors (bar)**")
+    # Pressure Group
+    st.markdown("**🧪 Pressure (bar)**")
     p_col1, p_col2 = st.columns(2)
     with p_col1:
-        fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1, key="press_fuel")
-        cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1, key="press_cool")
+        fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1)
+        cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1)
     with p_col2:
-        lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1, key="press_lub")
+        lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1)
 
-    st.divider()
-    st.info("💡 Real-time diagnostics enabled.")
+    st.caption("© 2026 MLOps Framework")
 
-# --- MAIN DASHBOARD ---
-st.title("🏎️ Engine Health Diagnostic System")
-st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data")
+# --- MAIN DASHBOARD (Compact Layout) ---
 
-# Metrics Row [cite: 72, 74, 76, 78, 80, 81]
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
-m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
-m3.metric("Cooling", f"{cool_p} bar", f"{cool_t}°C")
-m4.metric("Engine Speed", f"{current_rpm} RPM", "Active")
+# Unified Header Row
+header_col, metrics_col = st.columns([1, 2])
 
-st.divider()
+with header_col:
+    st.markdown('<p class="main-title">🏎️ Engine AI Diagnostic</p>', unsafe_allow_html=True)
+    st.caption("High-Fidelity Predictive Maintenance")
 
-# Analysis Section
+with metrics_col:
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
+    m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
+    m3.metric("Cooling", f"{cool_p} bar", f"{cool_t}°C")
+
+st.markdown("---")
+
+# Analysis & Results Section (Split Screen)
 left_col, right_col = st.columns([1.2, 1])
 
 with left_col:
@@ -104,22 +106,21 @@ with left_col:
     st.progress(max(0, min((cool_t - 60) / 40, 1.0)))
 
 with right_col:
-    st.subheader("🧠 AI Diagnostic Verdict")
+    st.subheader("🧠 AI Verdict")
     if st.button("EXECUTE SYSTEM CHECK"):
-        # Model performs classification into Normal or Failure risk [cite: 45, 46]
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
         
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
-            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True)
-            st.write(f"Confidence Level: **{prob:.1f}%**")
+            st.markdown("<h2 style='color:#28a745; margin:0;'>✅ HEALTHY</h2>", unsafe_allow_html=True)
+            st.write(f"Confidence: **{prob:.1f}%**")
         else:
-            # Result: Maintenance required [cite: 48]
-            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True)
-            st.write(f"Failure Probability: **{prob:.1f}%**")
-            st.error("Diagnostic Note: Abnormal thermal-pressure signature detected.")
+            st.markdown("<h2 style='color:#dc3545; margin:0;'>⚠️ FAULT RISK</h2>", unsafe_allow_html=True)
+            st.write(f"Probability: **{prob:.1f}%**")
+            st.error("Action: Maintenance required.")
         st.markdown('</div>', unsafe_allow_html=True)
-
-st.caption(f"© 2026 MLOps Framework | Developed by Sriranjan Uppoor")
+    else:
+        # Placeholder to keep the column filled and aligned
+        st.info("System ready. Click button to analyze engine condition[cite: 45].")
