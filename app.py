@@ -12,14 +12,28 @@ st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     [data-testid="stMetricValue"] { font-size: 24px; color: #007bff; }
-    .stButton>button { border-radius: 8px; height: 3.5em; background: linear-gradient(to right, #007bff, #0056b3); color: white; font-weight: bold; width: 100%; }
-    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; min-height: 180px; }
+    .stButton>button { 
+        border-radius: 8px; 
+        height: 3.5em; 
+        background: linear-gradient(to right, #007bff, #0056b3); 
+        color: white; 
+        font-weight: bold; 
+        width: 100%; 
+    }
+    .prediction-card { 
+        padding: 20px; 
+        border-radius: 12px; 
+        background-color: white; 
+        border: 1px solid #dee2e6; 
+        text-align: center; 
+    }
     section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model():
+    """Download and load the serialized SVM model pipeline[cite: 283]."""
     repo_id = "Sriranjan/Predictive_Maintenance_Model"
     path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
     return joblib.load(path)
@@ -28,19 +42,25 @@ model = load_model()
 
 # --- SIDEBAR: COMPACT CONTROLS ---
 with st.sidebar:
-    st.header("🕹️ Temperature & Telemetry") # Updated Header
+    st.header("🌡️ Temperature")
     
-    # TEMPERATURE GROUP - Moved to the top as requested
-    st.markdown("**🌡️ Temperature Sensors**")
+    # Operational Speed - Moved to top for high visibility
+    st.markdown("**⚙️ Operational Speed**")
+    current_rpm = st.number_input("Engine RPM", 0, 3000, 800, step=50, key="rpm_input_final")
+    
+    st.divider()
+
+    # Temperature Group [cite: 80, 81]
+    st.markdown("**🌡️ Temperature Sensors (°C)**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
-        lub_t = st.number_input("Lub Oil (°C)", 60, 100, 77, key="temp_lub")
+        lub_t = st.number_input("Lub Oil", 60, 100, 77, key="temp_lub")
     with t_col2:
-        cool_t = st.number_input("Coolant (°C)", 60, 100, 78, key="temp_cool")
+        cool_t = st.number_input("Coolant", 60, 100, 78, key="temp_cool")
         
     st.divider()
 
-    # PRESSURE GROUP
+    # Pressure Group [cite: 74, 76, 78]
     st.markdown("**🧪 Pressure Sensors (bar)**")
     p_col1, p_col2 = st.columns(2)
     with p_col1:
@@ -50,19 +70,13 @@ with st.sidebar:
         lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1, key="press_lub")
 
     st.divider()
-    
-    # ENGINE SPEED - Moved to its own line to guarantee visibility
-    st.markdown("**⚙️ Operational Speed**")
-    current_rpm = st.number_input("Engine RPM", 0, 3000, 800, step=50, key="rpm_input_final")
-
-    st.divider()
     st.info("💡 Real-time diagnostics enabled.")
 
 # --- MAIN DASHBOARD ---
 st.title("🏎️ Engine Health Diagnostic System")
 st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data")
 
-# Metrics Row
+# Metrics Row [cite: 72, 74, 76, 78, 80, 81]
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
 m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
@@ -92,6 +106,7 @@ with left_col:
 with right_col:
     st.subheader("🧠 AI Diagnostic Verdict")
     if st.button("EXECUTE SYSTEM CHECK"):
+        # Model performs classification into Normal or Failure risk [cite: 45, 46]
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
         
@@ -101,6 +116,7 @@ with right_col:
             st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True)
             st.write(f"Confidence Level: **{prob:.1f}%**")
         else:
+            # Result: Maintenance required [cite: 48]
             st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True)
             st.write(f"Failure Probability: **{prob:.1f}%**")
             st.error("Diagnostic Note: Abnormal thermal-pressure signature detected.")
