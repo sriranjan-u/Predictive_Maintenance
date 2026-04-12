@@ -20,8 +20,10 @@ st.markdown("""
 
 @st.cache_resource
 def load_model():
-    repo_id = "Sriranjan/Predictive_Maintenance_Model" [cite: 283]
-    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib") [cite: 284]
+    """Download and load the serialized SVM model pipeline."""
+    # Clean string with no brackets or citations after it
+    repo_id = "Sriranjan/Predictive_Maintenance_Model"
+    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
     return joblib.load(path)
 
 model = load_model()
@@ -29,14 +31,14 @@ model = load_model()
 # --- SIDEBAR: COMPACT CONTROLS ---
 with st.sidebar:
     st.header("🕹️ Telemetry Control")
-    
+
     st.markdown("**Thermal Sensors**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
         lub_t = st.number_input("Lub Oil (°C)", 60, 100, 77)
     with t_col2:
         cool_t = st.number_input("Coolant (°C)", 60, 100, 78)
-        
+
     st.divider()
 
     st.markdown("**Pressure Sensors (bar)**")
@@ -72,15 +74,15 @@ with left_col:
     st.subheader("📡 Live Telemetry Stream")
     # Mapping the UI variable 'current_rpm' to the model's feature 'Engine rpm'
     input_df = pd.DataFrame({
-        'Engine rpm': [current_rpm], [cite: 72]
-        'Lub oil pressure': [lub_p], [cite: 74]
-        'Fuel pressure': [fuel_p], [cite: 76]
-        'Coolant pressure': [cool_p], [cite: 78]
-        'lub oil temp': [lub_t], [cite: 79]
-        'Coolant temp': [cool_t] [cite: 81]
+        'Engine rpm': [current_rpm],
+        'Lub oil pressure': [lub_p],
+        'Fuel pressure': [fuel_p],
+        'Coolant pressure': [cool_p],
+        'lub oil temp': [lub_t],
+        'Coolant temp': [cool_t]
     })
     st.dataframe(input_df, hide_index=True, use_container_width=True)
-    
+
     st.write("**Thermal Saturation Index**")
     st.progress(max(0, min((cool_t - 60) / 40, 1.0)))
 
@@ -89,7 +91,7 @@ with right_col:
     if st.button("EXECUTE SYSTEM CHECK"):
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
-        
+
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
