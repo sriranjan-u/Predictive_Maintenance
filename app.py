@@ -7,7 +7,7 @@ import os
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="AI Engine Diagnostic", page_icon="🏎️", layout="wide")
 
-# --- CUSTOM THEME CSS (Aggressive White-Space Removal) ---
+# --- CUSTOM THEME CSS (Aggressive White-Space Removal & Button Highlighting) ---
 st.markdown("""
     <style>
     /* Reduce top padding of the main block */
@@ -19,6 +19,27 @@ st.markdown("""
     /* Metric styling */
     [data-testid="stMetricValue"] { font-size: 22px !important; color: #007bff; }
     
+    /* HIGH-CONTRAST SYSTEM CHECK BUTTON */
+    div.stButton > button:first-child {
+        background-color: #007bff;
+        color: white;
+        border-radius: 8px;
+        height: 3.5em;
+        width: 100%;
+        font-weight: bold;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    div.stButton > button:first-child:hover {
+        background-color: #0056b3;
+        border: none;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    }
+    
     /* Prediction card optimization */
     .prediction-card { 
         padding: 15px; 
@@ -26,7 +47,7 @@ st.markdown("""
         background-color: #ffffff; 
         border: 1px solid #dee2e6; 
         text-align: center;
-        margin-top: -10px;
+        margin-top: 5px;
     }
     
     /* Sidebar width and spacing */
@@ -36,39 +57,45 @@ st.markdown("""
 
 @st.cache_resource
 def load_model():
-    repo_id = "Sriranjan/Predictive_Maintenance_Model"
-    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
-    return joblib.load(path)
+    """Download and load the serialized SVM model pipeline from Hugging Face."""
+    repo_id = "Sriranjan/Predictive_Maintenance_Model" [cite: 283, 284]
+    path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib") [cite: 284]
+    return joblib.load(path) [cite: 92, 284]
 
-model = load_model()
+model = load_model() [cite: 284]
 
 # --- SIDEBAR: COMPACT CONTROLS ---
-with st.sidebar:
-    # RPM Speed - Top priority
-    current_rpm = st.number_input("⚙️ Engine RPM", 0, 3000, 800, step=50, key="rpm_input")
+with st.sidebar:    
+    # Engine_RPM input - Defined in RPM speed [cite: 72, 73]
+    current_rpm = st.number_input("⚙️ Engine RPM", 0, 3000, 800, step=50, key="rpm_input") [cite: 72]
     
     st.divider()
 
-    # Temperature Group
+    # Temperature Sensors Group - Defined in Celsius [cite: 79, 80, 81]
     st.markdown("**🌡️ Temperature (°C)**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
+        # Lub_Oil_Temperature [cite: 79, 80]
         lub_t = st.number_input("Lub Oil", 60, 100, 77, key="t_l")
     with t_col2:
+        # Coolant_Temperature [cite: 81]
         cool_t = st.number_input("Coolant", 60, 100, 78, key="t_c")
         
     st.divider()
 
-    # Pressure Group
+    # Pressure Sensors Group - Defined in bar [cite: 74, 75, 76, 77, 78]
     st.markdown("**🧪 Pressure (bar)**")
     p_col1, p_col2 = st.columns(2)
     with p_col1:
+        # Fuel_Pressure [cite: 76, 77]
         fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1)
+        # Coolant_Pressure [cite: 78]
         cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1)
     with p_col2:
+        # Lub_Oil_Pressure [cite: 74, 75]
         lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1)
 
-    st.caption("© 2026 MLOps Framework")
+    st.caption(f"© 2026 Developed by Sriranjan Uppoor")
 
 # --- MAIN DASHBOARD (Compact Layout) ---
 
@@ -81,6 +108,7 @@ with header_col:
 
 with metrics_col:
     m1, m2, m3 = st.columns(3)
+    # Comparison of key sensor features [cite: 172]
     m1.metric("Lubrication", f"{lub_p} bar", f"{lub_t}°C")
     m2.metric("Fuel System", f"{fuel_p} bar", "Stable")
     m3.metric("Cooling", f"{cool_p} bar", f"{cool_t}°C")
@@ -91,7 +119,8 @@ st.markdown("---")
 left_col, right_col = st.columns([1.2, 1])
 
 with left_col:
-    st.subheader("📡 Live Telemetry Stream")
+    st.subheader("📡 Data Preview")
+    # Store sensor data in a dataframe for inference [cite: 116, 117]
     input_df = pd.DataFrame({
         'Engine rpm': [current_rpm],
         'Lub oil pressure': [lub_p],
@@ -108,19 +137,21 @@ with left_col:
 with right_col:
     st.subheader("🧠 AI Verdict")
     if st.button("EXECUTE SYSTEM CHECK"):
+        # Model performs classification into Normal or Failure risk [cite: 45, 46, 282]
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
         
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
+            # Healthy engine condition [cite: 166]
             st.markdown("<h2 style='color:#28a745; margin:0;'>✅ HEALTHY</h2>", unsafe_allow_html=True)
             st.write(f"Confidence: **{prob:.1f}%**")
         else:
+            # Faulty engine condition [cite: 166]
             st.markdown("<h2 style='color:#dc3545; margin:0;'>⚠️ FAULT RISK</h2>", unsafe_allow_html=True)
             st.write(f"Probability: **{prob:.1f}%**")
-            st.error("Action: Maintenance required.")
+            st.error("Action: Maintenance required.") [cite: 48]
         st.markdown('</div>', unsafe_allow_html=True)
     else:
-        # Placeholder to keep the column filled and aligned
-        st.info("System ready. Click button to analyze engine condition[cite: 45].")
+        st.info("System ready. Click button to analyze engine condition.")
