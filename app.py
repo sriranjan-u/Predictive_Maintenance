@@ -13,15 +13,13 @@ st.markdown("""
     .main { background-color: #f8f9fa; }
     [data-testid="stMetricValue"] { font-size: 24px; color: #007bff; }
     .stButton>button { border-radius: 8px; height: 3.5em; background: linear-gradient(to right, #007bff, #0056b3); color: white; font-weight: bold; width: 100%; }
-    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; min-height: 200px; }
+    .prediction-card { padding: 25px; border-radius: 12px; background-color: white; border: 1px solid #dee2e6; text-align: center; min-height: 180px; }
     section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model():
-    """Download and load the serialized SVM model pipeline."""
-    # Clean string with no brackets or citations after it
     repo_id = "Sriranjan/Predictive_Maintenance_Model"
     path = hf_hub_download(repo_id=repo_id, filename="engine_pipeline.joblib")
     return joblib.load(path)
@@ -30,33 +28,39 @@ model = load_model()
 
 # --- SIDEBAR: COMPACT CONTROLS ---
 with st.sidebar:
-    st.header("🕹️ Telemetry Control")
-
-    st.markdown("**Thermal Sensors**")
+    st.header("🕹️ Temperature & Telemetry") # Updated Header
+    
+    # TEMPERATURE GROUP - Moved to the top as requested
+    st.markdown("**🌡️ Temperature Sensors**")
     t_col1, t_col2 = st.columns(2)
     with t_col1:
-        lub_t = st.number_input("Lub Oil (°C)", 60, 100, 77)
+        lub_t = st.number_input("Lub Oil (°C)", 60, 100, 77, key="temp_lub")
     with t_col2:
-        cool_t = st.number_input("Coolant (°C)", 60, 100, 78)
-
+        cool_t = st.number_input("Coolant (°C)", 60, 100, 78, key="temp_cool")
+        
     st.divider()
 
-    st.markdown("**Pressure Sensors (bar)**")
+    # PRESSURE GROUP
+    st.markdown("**🧪 Pressure Sensors (bar)**")
     p_col1, p_col2 = st.columns(2)
     with p_col1:
-        fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1)
-        cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1)
+        fuel_p = st.number_input("Fuel P.", 0.0, 20.0, 6.6, step=0.1, key="press_fuel")
+        cool_p = st.number_input("Coolant P.", 0.0, 10.0, 2.3, step=0.1, key="press_cool")
     with p_col2:
-        lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1)
-        # UNIQUE KEY ADDED TO FIX THE FROZEN INPUT
-        current_rpm = st.number_input("RPM Speed", 0, 3000, 800, step=50, key="sidebar_rpm_input")
+        lub_p = st.number_input("Lub Oil P.", 0.0, 10.0, 3.3, step=0.1, key="press_lub")
 
     st.divider()
-    st.info("💡 Values updated in real-time.")
+    
+    # ENGINE SPEED - Moved to its own line to guarantee visibility
+    st.markdown("**⚙️ Operational Speed**")
+    current_rpm = st.number_input("Engine RPM", 0, 3000, 800, step=50, key="rpm_input_final")
+
+    st.divider()
+    st.info("💡 Real-time diagnostics enabled.")
 
 # --- MAIN DASHBOARD ---
 st.title("🏎️ Engine Health Diagnostic System")
-st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data [cite: 3]")
+st.markdown("Automated Failure Prediction using High-Fidelity Sensor Data")
 
 # Metrics Row
 m1, m2, m3, m4 = st.columns(4)
@@ -72,7 +76,6 @@ left_col, right_col = st.columns([1.2, 1])
 
 with left_col:
     st.subheader("📡 Live Telemetry Stream")
-    # Mapping the UI variable 'current_rpm' to the model's feature 'Engine rpm'
     input_df = pd.DataFrame({
         'Engine rpm': [current_rpm],
         'Lub oil pressure': [lub_p],
@@ -82,7 +85,7 @@ with left_col:
         'Coolant temp': [cool_t]
     })
     st.dataframe(input_df, hide_index=True, use_container_width=True)
-
+    
     st.write("**Thermal Saturation Index**")
     st.progress(max(0, min((cool_t - 60) / 40, 1.0)))
 
@@ -91,14 +94,14 @@ with right_col:
     if st.button("EXECUTE SYSTEM CHECK"):
         pred = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][pred] * 100
-
+        
         st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
         if pred == 0:
             st.balloons()
-            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True) [cite: 47]
+            st.markdown("<h2 style='color:#28a745;'>✅ SYSTEM HEALTHY</h2>", unsafe_allow_html=True)
             st.write(f"Confidence Level: **{prob:.1f}%**")
         else:
-            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True) [cite: 48]
+            st.markdown("<h2 style='color:#dc3545;'>⚠️ MAINTENANCE REQUIRED</h2>", unsafe_allow_html=True)
             st.write(f"Failure Probability: **{prob:.1f}%**")
             st.error("Diagnostic Note: Abnormal thermal-pressure signature detected.")
         st.markdown('</div>', unsafe_allow_html=True)
